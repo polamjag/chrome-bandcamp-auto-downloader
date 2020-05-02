@@ -1,0 +1,25 @@
+{
+  "name" : "Bandcamp Auto Downloader",
+  "version" : "0.0.1",
+  "manifest_version": 2,
+  "permissions" : [
+    "contextMenus",
+    "downloads",
+    "https://bandcamp.com/"
+  ],
+  "content_scripts":[ {
+    "matches": ["https://bandcamp.com/download*"],
+    "js": [
+      "js/content.js"
+    ]
+  }],
+  "background" : {
+    "scripts": [
+      "js/main.js"
+    ]
+  },
+  "icons" : {
+    "16" : "icon-128.png",
+    "128" : "icon-128.png"
+  }
+}
