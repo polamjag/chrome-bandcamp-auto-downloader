@@ -106,28 +106,13 @@ class BulkDownloader {
   }
 }
 
-(function () {
-  var urlPatterns = ["https://bandcamp.com/download*"];
-
-  chrome.contextMenus.create({
-    type: "normal",
-    id: "main",
-    documentUrlPatterns: urlPatterns,
-    title: "Auto Download All Purchased Albums",
-  });
-
-  chrome.contextMenus.onClicked.addListener(function (e, tab) {
-    chrome.tabs.sendMessage(
-      tab.id,
-      { command: "get_all_download_urls" },
-      function (res) {
-        if (res && res.urls) {
-          const bulkDownloader = new BulkDownloader(res.urls);
-          bulkDownloader.fire();
-        } else {
-          window.alert("No download urls found; please retry after reloading");
-        }
-      }
-    );
-  });
-})();
+chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+  if (msg.command === "exec_download_urls") {
+    if (msg && msg.urls) {
+      const bulkDownloader = new BulkDownloader(msg.urls);
+      bulkDownloader.fire();
+    } else {
+      window.alert("No download urls found; please retry after reload");
+    }
+  }
+});
