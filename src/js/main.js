@@ -40,15 +40,13 @@ class Downloader {
     });
   }
 
-  // https://developer.chrome.com/extensions/downloads#type-State
-  async isDownloading() {
+  async canFinalizeDownload() {
     const currentDownloadItem = await this.getCurrentDownloadItem();
-    return currentDownloadItem.state === "in_progress";
-  }
-
-  async isDownloadCompleted() {
-    const currentDownloadItem = await this.getCurrentDownloadItem();
-    return currentDownloadItem.state === "complete";
+    // https://developer.chrome.com/extensions/downloads#type-State
+    return (
+      currentDownloadItem.state === "complete" ||
+      currentDownloadItem.state === "interrupted"
+    );
   }
 
   finalizeDownload() {
@@ -58,11 +56,20 @@ class Downloader {
   }
 
   async updateState() {
-    if (this.isFree()) { return; }
+    if (this.isFree()) {
+      return;
+    }
 
     const currentDownloadItem = await this.getCurrentDownloadItem();
-    console.log(`download id ${this.currentDownloadId}, state ${currentDownloadItem.state}`);
-    if (await this.isDownloadCompleted()) {
+    if (!currentDownloadItem) {
+      return;
+    }
+
+    console.log(
+      `updateState: download id ${this.currentDownloadId}, state ${currentDownloadItem.state}`
+    );
+
+    if (await this.canFinalizeDownload()) {
       this.finalizeDownload();
     }
   }
@@ -76,9 +83,16 @@ class BulkDownloader {
   }
 
   fire() {
-    this.poller = window.setInterval(() => {
-      this.tick();
-    }, 1000);
+    this.kickTick();
+  }
+
+  async kickTick() {
+    await this.tick();
+    if (this.hasNext()) {
+      window.setTimeout(() => {
+        this.kickTick();
+      }, 1000);
+    }
   }
 
   hasNext() {
@@ -89,20 +103,20 @@ class BulkDownloader {
     return this.queue.shift();
   }
 
-  tick() {
+  async tick() {
     if (!this.hasNext()) {
       window.clearInterval(this.poller);
       return;
     }
 
-    this.downloaders.forEach((downloader) => downloader.updateState());
-
-    this.downloaders.forEach((downloader, i) => {
-      console.log(i, downloader);
-      if (downloader.isFree() && this.hasNext()) {
-        downloader.download(this.getNextJob());
-      }
-    });
+    await Promise.all(
+      this.downloaders.map(async (downloader) => {
+        await downloader.updateState();
+        if (downloader.isFree() && this.hasNext()) {
+          downloader.download(this.getNextJob());
+        }
+      })
+    );
   }
 }
 
