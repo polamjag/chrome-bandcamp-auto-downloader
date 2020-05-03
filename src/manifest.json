@@ -14,6 +14,7 @@
     ]
   }],
   "background" : {
+    "persistent": false,
     "scripts": [
       "js/main.js"
     ]
