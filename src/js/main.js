@@ -79,7 +79,6 @@ class BulkDownloader {
   constructor(urls) {
     this.downloaders = Array.from({ length: 4 }, () => new Downloader());
     this.queue = urls;
-    this.poller = null;
   }
 
   fire() {
@@ -104,11 +103,6 @@ class BulkDownloader {
   }
 
   async tick() {
-    if (!this.hasNext()) {
-      window.clearInterval(this.poller);
-      return;
-    }
-
     await Promise.all(
       this.downloaders.map(async (downloader) => {
         await downloader.updateState();
