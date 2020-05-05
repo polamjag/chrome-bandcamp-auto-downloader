@@ -1,6 +1,6 @@
 {
   "name" : "Bandcamp Auto Downloader",
-  "version" : "0.0.1",
+  "version" : "0.0.3",
   "manifest_version": 2,
   "description": "Automatically downloads your purchased albums and tracks in one click.",
   "permissions" : [
