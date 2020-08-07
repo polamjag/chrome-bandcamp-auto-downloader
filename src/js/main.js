@@ -90,7 +90,7 @@ class BulkDownloader {
     if (this.hasNext()) {
       window.setTimeout(() => {
         this.kickTick();
-      }, 1000);
+      }, 500);
     }
   }
 
