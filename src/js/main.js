@@ -32,9 +32,9 @@ class Downloader {
         },
         (downloadItems) => {
           if (downloadItems[0]) {
-            resolve(downloadItems[0]);
+            return resolve(downloadItems[0]);
           }
-          reject(`DownloadItem not found for id ${this.currentDownloadId}`);
+          return reject(`DownloadItem not found for id ${this.currentDownloadId}`);
         }
       );
     });
