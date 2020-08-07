@@ -50,7 +50,7 @@ class Downloader {
   }
 
   finalizeDownload() {
-    console.log(`finalize download id ${this.currentDownloadId}`);
+    console.log(`finalize download id ${this.currentDownloadId} (url: ${this.currentDownloadUrl})`);
     this.currentDownloadUrl = undefined;
     this.currentDownloadId = undefined;
   }
