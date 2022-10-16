@@ -1,124 +1,39 @@
-class Downloader {
-  constructor() {
-    this.currentDownloadUrl = undefined;
-    this.currentDownloadId = undefined;
-  }
-
-  isFree() {
-    return !this.currentDownloadUrl;
-  }
-
-  download(url) {
-    if (!this.isFree()) {
-      return;
-    }
-    this.currentDownloadUrl = url;
+async function download(url) {
+  return new Promise((resolve, reject) => {
+    let downloadId;
     chrome.downloads.download(
       {
-        url,
+        url: url,
       },
-      (downloadId) => {
-        this.currentDownloadId = downloadId;
-        console.log(`download ${url}, got id: ${downloadId}`);
+      (gotDownloadId) => {
+        downloadId = gotDownloadId;
       }
     );
-  }
 
-  getCurrentDownloadItem() {
-    return new Promise((resolve, reject) => {
-      chrome.downloads.search(
-        {
-          id: this.currentDownloadId,
-        },
-        (downloadItems) => {
-          if (downloadItems[0]) {
-            return resolve(downloadItems[0]);
+    chrome.downloads.onChanged.addListener((downloadDelta) => {
+      if (downloadDelta.id === downloadId) {
+        chrome.downloads.search({ id: downloadId }, (results) => {
+          const a = results.find((x) => x.id === downloadId);
+          if (!a) {
+            return;
           }
-          return reject(`DownloadItem not found for id ${this.currentDownloadId}`);
-        }
-      );
+          if ((a.state.current = "complete")) {
+            return resolve();
+          } else if (a.state.current === "interrupted") {
+            return reject();
+          }
+        });
+      }
     });
-  }
-
-  async canFinalizeDownload() {
-    const currentDownloadItem = await this.getCurrentDownloadItem();
-    // https://developer.chrome.com/extensions/downloads#type-State
-    return (
-      currentDownloadItem.state === "complete" ||
-      currentDownloadItem.state === "interrupted"
-    );
-  }
-
-  finalizeDownload() {
-    console.log(`finalize download id ${this.currentDownloadId} (url: ${this.currentDownloadUrl})`);
-    this.currentDownloadUrl = undefined;
-    this.currentDownloadId = undefined;
-  }
-
-  async updateState() {
-    if (this.isFree()) {
-      return;
-    }
-
-    const currentDownloadItem = await this.getCurrentDownloadItem();
-    if (!currentDownloadItem) {
-      return;
-    }
-
-    console.log(
-      `updateState: download id ${this.currentDownloadId}, state ${currentDownloadItem.state}`
-    );
-
-    if (await this.canFinalizeDownload()) {
-      this.finalizeDownload();
-    }
-  }
+  });
 }
 
-class BulkDownloader {
-  constructor(urls) {
-    this.downloaders = Array.from({ length: 4 }, () => new Downloader());
-    this.queue = urls;
-  }
-
-  fire() {
-    this.kickTick();
-  }
-
-  async kickTick() {
-    await this.tick();
-    if (this.hasNext()) {
-      window.setTimeout(() => {
-        this.kickTick();
-      }, 500);
-    }
-  }
-
-  hasNext() {
-    return this.queue.length > 0;
-  }
-
-  getNextJob() {
-    return this.queue.shift();
-  }
-
-  async tick() {
-    await Promise.all(
-      this.downloaders.map(async (downloader) => {
-        await downloader.updateState();
-        if (downloader.isFree() && this.hasNext()) {
-          downloader.download(this.getNextJob());
-        }
-      })
-    );
-  }
-}
-
-chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(async function (msg, sender, sendResponse) {
   if (msg.command === "exec_download_urls") {
     if (msg && msg.urls) {
-      const bulkDownloader = new BulkDownloader(msg.urls);
-      bulkDownloader.fire();
+      for await (const url of msg.urls) {
+        await download(url)
+      }
     } else {
       window.alert("No download urls found; please retry after reload");
     }
