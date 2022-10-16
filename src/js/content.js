@@ -1,19 +1,36 @@
 (() => {
   const downloadBtn = document.createElement("button");
 
-  const fireDownload = () => {
-    const urls = Array.from(
-      document.querySelectorAll(".download-title a")
-    ).map((el) => el.getAttribute("href"));
+  const findAllDownloadLinks = async () => {
+    return new Promise((resolve) => {
+      window.setTimeout(() => {
+        const urls = Array.from(
+          document.querySelectorAll(".download-title a")
+        ).map((el) => el.getAttribute("href"));
+
+        // wait until all download links available
+        if (urls.every(x => !!x)) {
+          return resolve(urls)
+        } else {
+          return resolve(findAllDownloadLinks());
+        }
+      }, 500);
+    });
+  };
+
+  const fireDownload = async () => {
+    downloadBtn.innerText = "Downloading All Purchases...";
+
+    const msg = document.createElement("div");
+    msg.innerText = "Waiting for download";
+    msg.style.padding = ".8em";
+    msg.style.backgroundImage = "#1111";
+    downloadBtn.insertAdjacentElement("afterend", msg);
+
+    const urls = await findAllDownloadLinks();
     chrome.runtime.sendMessage({ command: "exec_download_urls", urls });
 
-    downloadBtn.innerText = "Downloading All Purchases..."
-
-    const msg = document.createElement('div');
-    msg.innerText = 'Not working well? Please reload page and retry';
-    msg.style.padding = '.8em';
-    msg.style.backgroundImage = '#1111';
-    downloadBtn.insertAdjacentElement('afterend', msg);
+    msg.innerText = "Started Downloading"
   };
 
   downloadBtn.innerText = "Auto Download All Purchases";
