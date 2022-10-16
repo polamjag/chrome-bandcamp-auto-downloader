@@ -60,8 +60,8 @@
   const tick = () => {
     const diff = MAX_CONCURRENT_DOWNLOADS - activeDownloads.length;
     const nextDownloads = downloadQueue.splice(0, diff);
-
     nextDownloads.forEach((x) => download(x));
+
     statusMessage.innerText = `Downloading (${
       activeDownloads.length + downloadQueue.length
     } remaining); Do not close this tab`;
