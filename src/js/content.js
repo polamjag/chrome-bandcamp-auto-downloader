@@ -1,6 +1,17 @@
 (() => {
   const downloadBtn = document.createElement("button");
 
+  const statusMessage = document.createElement("div");
+  statusMessage.innerText = "Waiting for download... Do not close this tab";
+  statusMessage.style.fontSize = "1.2em";
+  statusMessage.style.backgroundImage = "#1111";
+  statusMessage.style.width = "800px";
+  statusMessage.style.margin = "0 auto";
+
+  let activeDownloads = [];
+  let downloadQueue = [];
+  const MAX_CONCURRENT_DOWNLOADS = 4;
+
   const findAllDownloadLinks = async () => {
     return new Promise((resolve) => {
       window.setTimeout(() => {
@@ -9,8 +20,8 @@
         ).map((el) => el.getAttribute("href"));
 
         // wait until all download links available
-        if (urls.every(x => !!x)) {
-          return resolve(urls)
+        if (urls.every((x) => !!x)) {
+          return resolve(urls);
         } else {
           return resolve(findAllDownloadLinks());
         }
@@ -18,19 +29,61 @@
     });
   };
 
+  chrome.runtime.onMessage.addListener((msg) => {
+    switch (msg.command) {
+      case "download_update":
+        if (msg.download.state === "complete") {
+          activeDownloads = activeDownloads.filter(
+            (x) => x.id !== msg.download.id
+          );
+        }
+        tick();
+        break;
+      case "download_started":
+        // update activeDownloads with Download.id
+        activeDownloads = activeDownloads.map((x) => {
+          if (x.url === msg.download.url) {
+            return msg.download;
+          } else {
+            return x;
+          }
+        });
+        break;
+    }
+  });
+
+  const download = (url) => {
+    activeDownloads.push({ url: url });
+    chrome.runtime.sendMessage({ command: "exec_download_urls", urls: [url] });
+  };
+
+  const tick = () => {
+    const diff = MAX_CONCURRENT_DOWNLOADS - activeDownloads.length;
+    const nextDownloads = downloadQueue.splice(0, diff);
+
+    nextDownloads.forEach((x) => download(x));
+    statusMessage.innerText = `Downloading (${
+      activeDownloads.length + downloadQueue.length
+    } remaining); Do not close this tab`;
+
+    if (downloadQueue.length === 0) {
+      statusMessage.innerText =
+        "All downloads triggered; You can close this tab";
+    }
+  };
+
   const fireDownload = async () => {
     downloadBtn.innerText = "Downloading All Purchases...";
 
-    const msg = document.createElement("div");
-    msg.innerText = "Waiting for download";
-    msg.style.padding = ".8em";
-    msg.style.backgroundImage = "#1111";
-    downloadBtn.insertAdjacentElement("afterend", msg);
+    document
+      .querySelector(".download-extras")
+      .insertAdjacentElement("afterend", statusMessage);
 
     const urls = await findAllDownloadLinks();
-    chrome.runtime.sendMessage({ command: "exec_download_urls", urls });
+    downloadQueue.push(...urls);
+    tick();
 
-    msg.innerText = "Started Downloading"
+    statusMessage.innerText = "Downloading";
   };
 
   downloadBtn.innerText = "Auto Download All Purchases";

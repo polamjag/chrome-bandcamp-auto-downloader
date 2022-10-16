@@ -1,14 +1,20 @@
 {
-  "version" : "0.0.4",
+  "version": "0.1.0",
   "name": "Bandcamp Auto Downloader",
   "manifest_version": 3,
   "description": "Automatically downloads your purchased albums and tracks in one click.",
   "permissions": [
-    "downloads"
+    "downloads",
+    "tabs"
   ],
   "host_permissions": [
     "https://bandcamp.com/"
   ],
+  "externally_connectable": {
+    "matches": [
+      "https://bandcamp.com/download*"
+    ]
+  },
   "content_scripts": [
     {
       "matches": [

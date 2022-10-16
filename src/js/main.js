@@ -1,38 +1,51 @@
-async function download(url) {
-  return new Promise((resolve, reject) => {
-    let downloadId;
-    chrome.downloads.download(
-      {
-        url: url,
-      },
-      (gotDownloadId) => {
-        downloadId = gotDownloadId;
-      }
-    );
-
-    chrome.downloads.onChanged.addListener((downloadDelta) => {
-      if (downloadDelta.id === downloadId) {
-        chrome.downloads.search({ id: downloadId }, (results) => {
-          const a = results.find((x) => x.id === downloadId);
-          if (!a) {
-            return;
-          }
-          if ((a.state.current = "complete")) {
-            return resolve();
-          } else if (a.state.current === "interrupted") {
-            return reject();
-          }
+function download(url) {
+  chrome.downloads.download(
+    {
+      url: url,
+    },
+    (gotDownloadId) => {
+      chrome.tabs.query({ url: "https://bandcamp.com/download*" }, (tabs) => {
+        tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(tab.id, {
+            command: "download_started",
+            download: {
+              id: gotDownloadId,
+              url: url,
+            },
+          });
         });
-      }
-    });
-  });
+      });
+    }
+  );
 }
 
-chrome.runtime.onMessage.addListener(async function (msg, sender, sendResponse) {
+chrome.downloads.onChanged.addListener((downloadDelta) => {
+  chrome.downloads.search({ id: downloadDelta.id }, async (results) => {
+    const found = results.find((x) => x.id === downloadDelta.id);
+    if (!found) {
+      return;
+    }
+
+    chrome.tabs.query({ url: "https://bandcamp.com/download*" }, (tabs) => {
+      tabs.forEach((tab) => {
+        chrome.tabs.sendMessage(tab.id, {
+          command: "download_update",
+          download: {
+            id: found.id,
+            url: found.url,
+            state: found.state,
+          },
+        });
+      });
+    });
+  });
+});
+
+chrome.runtime.onMessage.addListener((msg) => {
   if (msg.command === "exec_download_urls") {
     if (msg && msg.urls) {
-      for await (const url of msg.urls) {
-        await download(url)
+      for (const url of msg.urls) {
+        download(url);
       }
     } else {
       window.alert("No download urls found; please retry after reload");
