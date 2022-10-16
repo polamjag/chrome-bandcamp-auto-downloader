@@ -1,26 +1,35 @@
 {
-  "name" : "Bandcamp Auto Downloader",
-  "version" : "0.0.4",
-  "manifest_version": 2,
+  "version": "0.1.0",
+  "name": "Bandcamp Auto Downloader",
+  "manifest_version": 3,
   "description": "Automatically downloads your purchased albums and tracks in one click.",
-  "permissions" : [
+  "permissions": [
     "downloads",
+    "tabs"
+  ],
+  "host_permissions": [
     "https://bandcamp.com/"
   ],
-  "content_scripts":[ {
-    "matches": ["https://bandcamp.com/download*"],
-    "js": [
-      "js/content.js"
-    ]
-  }],
-  "background" : {
-    "persistent": false,
-    "scripts": [
-      "js/main.js"
+  "externally_connectable": {
+    "matches": [
+      "https://bandcamp.com/download*"
     ]
   },
-  "icons" : {
-    "16" : "icon-128.png",
-    "128" : "icon-128.png"
+  "content_scripts": [
+    {
+      "matches": [
+        "https://bandcamp.com/download*"
+      ],
+      "js": [
+        "js/content.js"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "js/main.js"
+  },
+  "icons": {
+    "16": "icon-128.png",
+    "128": "icon-128.png"
   }
 }
