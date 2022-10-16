@@ -1,23 +1,27 @@
-function download(url) {
+const sendMessageToBandcampDownloadTabs = (payload) => {
+  chrome.tabs.query({ url: "https://bandcamp.com/download*" }, (tabs) => {
+    tabs.forEach((tab) => {
+      chrome.tabs.sendMessage(tab.id, payload);
+    });
+  });
+};
+
+const download = (url) => {
   chrome.downloads.download(
     {
       url: url,
     },
     (gotDownloadId) => {
-      chrome.tabs.query({ url: "https://bandcamp.com/download*" }, (tabs) => {
-        tabs.forEach((tab) => {
-          chrome.tabs.sendMessage(tab.id, {
-            command: "download_started",
-            download: {
-              id: gotDownloadId,
-              url: url,
-            },
-          });
-        });
+      sendMessageToBandcampDownloadTabs({
+        command: "download_started",
+        download: {
+          id: gotDownloadId,
+          url: url,
+        },
       });
     }
   );
-}
+};
 
 chrome.downloads.onChanged.addListener((downloadDelta) => {
   chrome.downloads.search({ id: downloadDelta.id }, async (results) => {
@@ -26,17 +30,13 @@ chrome.downloads.onChanged.addListener((downloadDelta) => {
       return;
     }
 
-    chrome.tabs.query({ url: "https://bandcamp.com/download*" }, (tabs) => {
-      tabs.forEach((tab) => {
-        chrome.tabs.sendMessage(tab.id, {
-          command: "download_update",
-          download: {
-            id: found.id,
-            url: found.url,
-            state: found.state,
-          },
-        });
-      });
+    sendMessageToBandcampDownloadTabs({
+      command: "download_update",
+      download: {
+        id: found.id,
+        url: found.url,
+        state: found.state,
+      },
     });
   });
 });
